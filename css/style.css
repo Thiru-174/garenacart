@@ -394,8 +394,47 @@ button.btn:hover {
 footer {
   text-align: center;
   padding: 20px;
-  color: #6e6e73;
+  color: white;
   font-size: 14px;
+}
+/* Container for the "above footer" section */
+.footer {
+  background-color: #e2e2e2; /* Ash color */
+  padding: 30px;
+  display: flex;
+  flex-wrap: wrap; /* Wrap columns on smaller screens */
+  justify-content: space-around;
+  color: white; /* Default text color */
+}
+
+/* Columns within the pre-footer */
+.footer-col {
+  flex: 1 1 200px; /* Responsive column width */
+  margin: 10px;
+  min-width: 180px;
+}
+
+/* Headings in green */
+.footer-col h3 {
+  color: #28a745; /* Green shade */
+  margin-bottom: 10px;
+  font-size: 1.1rem;
+}
+
+/* Lists and links */
+.footer-col ul {
+  list-style: none;
+  padding: 0;
+}
+.footer-col ul li {
+  margin-bottom: 6px;
+}
+.footer-col ul li a {
+  color: white;
+  text-decoration: none;
+}
+.footer-col ul li a:hover {
+  text-decoration: underline;
 }
 
 /* Responsive Design */
