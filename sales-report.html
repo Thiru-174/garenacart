@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Report - ProCart</title>
+    <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-firestore.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Existing styles remain the same */
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .report-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            padding: 30px;
+            width: 80%;
+            max-width: 800px;
+            animation: fadeIn 0.5s ease-in;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 2em;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+        .total-row {
+            font-weight: bold;
+            background-color: #e8f5e9;
+        }
+        #salesChart {
+            margin-top: 30px;
+        }
+        .back-btn {
+            display: block;
+            margin: 20px auto 0;
+            padding: 10px 20px;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .back-btn:hover {
+            background-color: #1976D2;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="report-container">
+        <h1>Sales Report</h1>
+        <div id="salesTableContainer"></div>
+        <canvas id="salesChart"></canvas>
+        <button class="back-btn" onclick="window.location.href='admin.html'">Back to Admin Panel</button>
+    </div>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCONCCtzR6bsEbbruuCmcGlpvCtehfhcb4",
+            authDomain: "procart-3e4ca.firebaseapp.com",
+            projectId: "procart-3e4ca",
+            storageBucket: "procart-3e4ca.firebasestorage.app",
+            messagingSenderId: "1025919263927",
+            appId: "1:1025919263927:web:72cff3ed976d95d54b1932",
+            measurementId: "G-4HT5YF32WZ"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        auth.onAuthStateChanged(user => {
+            console.log("Auth state changed:", user);
+            if (!user) {
+                alert("You must be logged in to view this report.");
+                window.location.href = "index.html";
+            } else {
+                generateSalesReport();
+            }
+        });
+
+        function generateSalesReport() {
+            const salesData = {};
+            console.log("Generating sales report...");
+
+            db.collection('orders')
+                .where('status', '==', 'completed')
+                .get()
+                .then(snapshot => {
+                    console.log("Orders snapshot:", snapshot);
+                    if (snapshot.empty) {
+                        console.log("No completed orders found.");
+                        document.getElementById('salesTableContainer').innerHTML = "<p>No sales data available.</p>";
+                        return;
+                    }
+
+                    snapshot.forEach(doc => {
+                        const order = doc.data();
+                        console.log("Order data:", order);
+                        order.items.forEach(item => {
+                            const category = item.subCategory || 'Uncategorized';
+                            const sales = item.price * item.quantity;
+                            salesData[category] = (salesData[category] || 0) + sales;
+                        });
+                    });
+
+                    if (Object.keys(salesData).length === 0) {
+                        document.getElementById('salesTableContainer').innerHTML = "<p>No sales data available.</p>";
+                        return;
+                    }
+
+                    displayTable(salesData);
+                    drawChart(salesData);
+                })
+                .catch(error => {
+                    console.error("Error generating sales report:", error);
+                    document.getElementById('salesTableContainer').innerHTML = "<p>Error loading sales data.</p>";
+                });
+        }
+
+        function displayTable(data) {
+            let container = document.getElementById('salesTableContainer');
+            let totalSales = Object.values(data).reduce((sum, value) => sum + value, 0);
+
+            let tableHTML = `<table>
+                <tr><th>Category</th><th>Sales (₹)</th></tr>`;
+            
+            for (let category in data) {
+                tableHTML += `<tr><td>${category}</td><td>₹${data[category].toFixed(2)}</td></tr>`;
+            }
+
+            tableHTML += `<tr class="total-row"><td>Total Sales</td><td>₹${totalSales.toFixed(2)}</td></tr>`;
+            tableHTML += `</table>`;
+
+            container.innerHTML = tableHTML;
+        }
+
+        function drawChart(data) {
+            let ctx = document.getElementById('salesChart').getContext('2d');
+
+            if (window.salesChart) {
+                window.salesChart.destroy();
+            }
+
+            window.salesChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(data),
+                    datasets: [{
+                        label: 'Sales by Category (₹)',
+                        data: Object.values(data),
+                        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'],
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: true }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Sales Amount (₹)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
